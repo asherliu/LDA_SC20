@@ -79,7 +79,7 @@ bool sortChunkMap(const chunkMapSortStruct& a, const chunkMapSortStruct& b)
 }
 
 
-const int K = 32768;
+const int K = 1024;
 
 
 int main(int argc, char *argv[]) {
