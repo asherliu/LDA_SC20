@@ -38,11 +38,11 @@ int main(int argc, char *argv[]) {
 	int maxChunkWTLength;
 	int numOfWordD;
 	int numOfWordS;
-	int numChunks = 16;
+	int numChunks = 4;
 	int numIters = 200;
 
 	
-	string chunkFilePrefix ="/gpfs/alpine/proj-shared/csc289/lda/datasets/data200k";
+	string chunkFilePrefix ="/gpfs/alpine/proj-shared/csc289/lda/datasets/nytimes";
 
 	ifstream lengthVec((chunkFilePrefix + string("/lengthVec.txt")).c_str(), ios::binary);//store max Doc and DT length
 

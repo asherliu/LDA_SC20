@@ -30,7 +30,7 @@ void SampleKernelD(WTD &argWTDen, WTAll &argWT, DTChunk &argDT, Document &argDoc
    
  //    gpuErr(cudaPeekAtLastError());
 
-	initRandState << <GridDim, BlockDim >> >(randState);
+	//initRandState << <GridDim, BlockDim >> >(randState);
 	H_ERR(cudaDeviceSynchronize());
 
 	// for (int i = 0; i < iterWT; i++) {
@@ -53,7 +53,7 @@ void SampleKernel(WTAll &argWT, DTChunk &argDT, Document &argDoc, curandState* r
 	cudaMalloc(&deviceCounter, sizeof(unsigned int));
 	cudaMemset(deviceCounter, 0, sizeof(unsigned int));
 
-	initRandState << <GridDim, BlockDim >> >(randState);
+	//initRandState << <GridDim, BlockDim >> >(randState);
 	H_ERR(cudaDeviceSynchronize());
 
 	LDAKernelTrain << <GridDim, BlockDim >> > (alpha, beta, argDoc.deviceMapWord2Doc, argDoc.deviceTLTopic, argDT.deviceNZDTCount, argDT.deviceDTIndex, argDT.deviceDTValue, argDoc.deviceTLDocCount, argDoc.deviceTLDocOffset, argDT.deviceDTCount, argDT.deviceDTOffset, argWT.deviceNZWTCount, argWT.deviceWTIndex, argWT.deviceWTValue, argDoc.deviceTLWordCount, argDoc.deviceTLWordOffset, argWT.deviceWTCount, argWT.deviceWTOffset, argWT.deviceWTRowSum, deviceCounter, argDoc.deviceMapDoc2Word, argDoc.docLengthVec[argDT.chunkId], argWT.wordLength, argDoc.devicePerplexityMid, randState, argDoc.deviceWTHeadDense, numOfWordD, argWT.numOfWordS);
