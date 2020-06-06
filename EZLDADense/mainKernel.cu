@@ -50,12 +50,12 @@ int main(int argc, char *argv[]) {
 	int maxChunkWTLength;
 	int numOfWordD;
 	int numOfWordS;
-	int numChunks = 4;
+	int numChunks = 16;
 	int numIters = 300;
 
 	int chunksPerStream = numChunks / numStreams;
 
-	string chunkFilePrefix = "/gpfs/alpine/proj-shared/csc289/lda/datasets/nytimes";
+	string chunkFilePrefix = "/gpfs/alpine/proj-shared/csc289/lda/datasets/data200k";
 
 	
 	ofstream SamplingDRecord((chunkFilePrefix + string("/SamplingDRecord.txt")).c_str(), ios::binary);
