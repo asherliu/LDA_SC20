@@ -16,7 +16,6 @@
 //#include <direct.h>
 using namespace std;
 
-
 //void computeMaxVec(int* argMaxVec, int* argCompareVec, int argVecLength);
 void computeOffset(int* argOffset, int* argCount, int argVecLength);
 void creatFolder(string argFolderName);
@@ -36,7 +35,7 @@ typedef struct chunkSort
 	int docId;
 	int wordId;
 	int wordRank;
-	int topic;
+	unsigned short int topic;
 }chunkSortStruct;
 
 typedef struct chunkMapSort
@@ -44,6 +43,10 @@ typedef struct chunkMapSort
 	int mapDoc2Word;
 	int mapWord2Doc;
 }chunkMapSortStruct;
+
+
+
+
 
 
 typedef struct maxLengthStruct
@@ -84,7 +87,7 @@ const int K = 1024;
 
 int main(int argc, char *argv[]) {
 	//string docIdxFileName = filePrefix + ".doc.idx";
-	string docIdxFileName = "/gpfs/alpine/proj-shared/csc289/lda/datasets/dataNews20.txt";
+	string docIdxFileName = "/gpfs/alpine/proj-shared/csc289/lda/datasets/docword.pubmed.txt";
 	ifstream docIdxStream(docIdxFileName.c_str(), ios::binary);
 	if (!docIdxStream.is_open())
 	{
@@ -99,7 +102,7 @@ int main(int argc, char *argv[]) {
 	int numOfWordD = 0;
 
 	docIdxStream >> D >> W >> NNZ;
-	int numChunks = 1;
+	const int numChunks = 8;
 	int* chunkSizeVec= new int[numChunks];	//store length of tokenlist of chunks
 	int chunkSizeMax = 0; //max of element in chunkSizeVec
 	int* docIdStartVec = new int[numChunks];
@@ -107,61 +110,158 @@ int main(int argc, char *argv[]) {
 	int* wordCountVec = new int[W];	//store the token count of each word	
 	int* wordRankVec = new int[W];		// store the rank sorted by token count
 
+	int* docCountVec=new int[D];
+	//int* docIdVec = new int[D];
+	int* docChunkIdVec = new int[D];
+
+	int* docBlockCountVec = new int[1000];
+	int* docBlockChunkIdVec = new int[1000];
+
+	memset(docBlockCountVec, 0, 1000 * sizeof(int));
+	memset(docCountVec, 0, D * sizeof(int));
+	//memset(docIdVec, 0, D * sizeof(int));
+
+
+	int tmpD = 0, tmpW = 0, tmpNNZ = 0, tmpIdx=0;
+	int j = 0;
+	int newDocId = 0;
+	int oldDocId = 1;
+	long long int totalTokens = 0;
+	for (int i = 0; i < NNZ; i++) {
+		docIdxStream >> tmpD >> tmpW >> tmpNNZ;
+		if (tmpD != oldDocId) {
+			//docIdVec[j] = oldDocId;
+			docCountVec[j] = tmpIdx;
+			docBlockCountVec[docCountVec[j]] ++ ;
+			tmpIdx = 0;
+			j++;
+		}
+		tmpIdx+= tmpNNZ;
+		totalTokens += tmpNNZ;
+		oldDocId = tmpD;
+	}
+	docIdxStream.close();
+	//docIdVec[j + 1] = oldDocId;
+	docCountVec[j + 1] = tmpIdx;
+
+
+	int numTokensPerChunk = (totalTokens - 1) / numChunks + 1;
+	
+	int* docThresholdVec = new int[numChunks];
+	tmpIdx = 0;
+	j = 0;
+	int tmpChunkId = 0;
+	for (int i = 0; i < 1000; i++) {
+		tmpIdx += docBlockCountVec[i]*i;
+		docBlockChunkIdVec[i] = tmpChunkId;
+		if (tmpIdx > (j + 1)*numTokensPerChunk) {
+			docThresholdVec[j] = i;
+			tmpChunkId += 1;
+			j++;
+		}
+	}
+
+	for (int i = 0; i < D; i++) {	
+
+		docChunkIdVec[i]= docBlockChunkIdVec[docCountVec[i]];
+
+	}
+
+	string filePrefix = "/gpfs/alpine/proj-shared/csc289/lda/datasets/pubmed";
+
+	ofstream streams[numChunks];
+	for (int chunkId = 0; chunkId < numChunks; chunkId++) {
+		streams[chunkId].open((filePrefix + string(".chunk") + to_string(chunkId) + string(".txt")).c_str(), ios::binary);
+		/*ofstream docWordChunk();*/
+	}
+
+	docIdxStream.open(docIdxFileName.c_str(), ios::binary);
+	docIdxStream >> D >> W >> NNZ;
+	tmpD = 0, tmpW = 0, tmpNNZ = 0, tmpIdx = 0;
+	j = 0;
+	newDocId = 0;
+	oldDocId = 0;
+	int* docIdVec = new int[numChunks];
+	memset(docIdVec, 0, numChunks * sizeof(int));
 	memset(wordCountVec, 0, W * sizeof(int));
 	memset(wordRankVec, 0, W * sizeof(int));
 	memset(chunkSizeVec, 0, numChunks * sizeof(int));
 
-	int docStep = D / numChunks;
-	for (int i = 0; i < numChunks; i++)
-	{
-		docIdStartVec[i] = i*docStep+1;
-		docIdEndVec[i] =(D-(i + 1)*docStep>0)? (i + 1)*docStep:D;
+	for (int i = 0; i < NNZ; i++) {
+		docIdxStream >> tmpD >> tmpW >> tmpNNZ;
+		
+		if (tmpD != oldDocId) {
+			tmpChunkId = docChunkIdVec[tmpD-1];
+			docIdVec[tmpChunkId]++;
+
+		}
+		for (int k = 0; k < tmpNNZ; k++) {
+			streams[tmpChunkId] << docIdVec[tmpChunkId] << " " << tmpW << "\n";;
+		}
+		wordCountVec[tmpW - 1] += tmpNNZ;
+		chunkSizeVec[tmpChunkId] += tmpNNZ;
+		oldDocId = tmpD;
 	}
 
+	docIdxStream.close();
+
+
+	//int docStep = D / numChunks;
+	//for (int i = 0; i < numChunks; i++)
+	//{
+	//	docIdStartVec[i] = i*docStep+1;
+	//	docIdEndVec[i] =(D-(i + 1)*docStep>0)? (i + 1)*docStep:D;
+	//}
+
 	maxLength chunkLength;
+
+	int docStep = 0;
+	for (int i = 0; i < numChunks; i++) {
+		docStep = (docIdVec[i] > docStep) ? docIdVec[i] : docStep;
+	}
 	chunkLength.docStep = docStep;
 	chunkLength.W = W;
 
-	string filePrefix = "/gpfs/alpine/proj-shared/csc289/lda/datasets/dataNews20";
-	printf("chunk partitioning ...\n");
-	int j = 0;
-	int tmpD=0, tmpW=0, tmpNNZ=0;
-	for (int chunkId = 0; chunkId < numChunks; chunkId++)
-	{
-		ofstream docWordChunk((filePrefix + string(".chunk") + to_string(chunkId) + string(".txt")).c_str(), ios::binary);
-		if (chunkId)
-		{
-			for (int i = 0; i < tmpNNZ; i++)
-			{
-				docWordChunk << tmpD << " " << tmpW << "\n";
-			}
-			wordCountVec[tmpW-1] += tmpNNZ;
-			chunkSizeVec[chunkId] += tmpNNZ;
-		}
 
-		while (j < NNZ) {
+	//
+	//printf("chunk partitioning ...\n");
+	//j = 0;
+	//tmpD=0, tmpW=0, tmpNNZ=0;
 
-			docIdxStream >> tmpD >> tmpW >> tmpNNZ;
-		
-			if (tmpD > docIdEndVec[chunkId])
-			{
-				docWordChunk.close();
-				break;
-			}
-			wordCountVec[tmpW - 1] += tmpNNZ;
-			chunkSizeVec[chunkId] += tmpNNZ;
-			for (int i = 0; i < tmpNNZ; i++)
-			{
-				docWordChunk << tmpD << " " << tmpW << "\n";
-			}
-			//docWordChunk << tmpD << tmpW << tmpNNZ;
-			j++;
-		}
-		
-	}
-	docIdxStream.close();
+	//for (int chunkId = 0; chunkId < numChunks; chunkId++)
+	//{
+	//	ofstream docWordChunk((filePrefix + string(".chunk") + to_string(chunkId) + string(".txt")).c_str(), ios::binary);
+	//	if (chunkId)
+	//	{
+	//		for (int i = 0; i < tmpNNZ; i++)
+	//		{
+	//			docWordChunk << tmpD << " " << tmpW << "\n";
+	//		}
+	//		wordCountVec[tmpW-1] += tmpNNZ;
+	//		chunkSizeVec[chunkId] += tmpNNZ;
+	//	}
 
- 
+	//	while (j < NNZ) {
+
+	//		docIdxStream >> tmpD >> tmpW >> tmpNNZ;
+	//	
+	//		if (tmpD > docIdEndVec[chunkId])
+	//		{
+	//			docWordChunk.close();
+	//			break;
+	//		}
+	//		wordCountVec[tmpW - 1] += tmpNNZ;
+	//		chunkSizeVec[chunkId] += tmpNNZ;
+	//		for (int i = 0; i < tmpNNZ; i++)
+	//		{
+	//			docWordChunk << tmpD << " " << tmpW << "\n";
+	//		}
+	//		//docWordChunk << tmpD << tmpW << tmpNNZ;
+	//		j++;
+	//	}
+	//	
+	//}
+	//docIdxStream.close();
 
 	for (int chunkId = 0; chunkId < numChunks; chunkId++) {
 		chunkSizeMax = (chunkSizeMax > chunkSizeVec[chunkId]) ? chunkSizeMax : chunkSizeVec[chunkId];
@@ -220,10 +320,6 @@ int main(int argc, char *argv[]) {
 	//*********Tokenlist offset
 
 
-
-
-
-
 	//************DT matrix offset
 	int* chunkDTCountVec = new int[docStep];
 	int* chunkDTOffsetVec = new int[docStep];
@@ -253,7 +349,7 @@ int main(int argc, char *argv[]) {
 	vector<chunkSortStruct> chunkVec(chunkSizeMax); //store the information of chunk
 	vector<chunkMapSortStruct>chunkMapVec(chunkSizeMax);//store the information of chunk map
 
-	string chunkFilePrefix = "/gpfs/alpine/proj-shared/csc289/lda/datasets/dataNews20";// folder that store preprocessed chunks
+	string chunkFilePrefix = "/gpfs/alpine/proj-shared/csc289/lda/datasets/pubmedBalance";// folder that store preprocessed chunks
 	creatFolder(chunkFilePrefix);
 
 
@@ -301,7 +397,7 @@ int main(int argc, char *argv[]) {
 			chunkVec[i].wordRank = wordRankVec[tmpW - 1];
 			chunkVec[i].mapDoc2Word = i;
 			chunkVec[i].topic = rand() % (K)+1;
-			chunkDocCountVec[tmpD - docIdStartVec[chunkId]] += 1;
+			chunkDocCountVec[tmpD - 1] += 1;
 		}
 		docWordChunk.close();
 
@@ -319,7 +415,7 @@ int main(int argc, char *argv[]) {
 		computeOffset(chunkDocOffsetVec, chunkDocCountVec, docStep);
 		computeOffset(chunkDTOffsetVec, chunkDTCountVec, docStep);
 
-		for (int i = 0; i < docStep; i++)
+		for (int i = 0; i < docIdVec[chunkId]; i++)
 		{
 
 			docCountOffset << chunkDocCountVec[i] << " " << chunkDocOffsetVec[i] << "\n";
@@ -337,7 +433,7 @@ int main(int argc, char *argv[]) {
 		for (int i = 0; i < chunkSizeVec[chunkId]; i++)
 		{
 
-			doc2WordMap << chunkVec[i].docId-chunkId*docStep << "\n";
+			doc2WordMap << chunkVec[i].docId<< "\n";
 			chunkMapVec[i].mapDoc2Word = chunkVec[i].mapDoc2Word;
 			chunkMapVec[i].mapWord2Doc = i;
 			chunkWordCountVec[chunkVec[i].wordRank - 1] += 1;
@@ -427,7 +523,7 @@ int main(int argc, char *argv[]) {
 	chunkLength.maxChunkWTLength = 0;
 	for (int chunkId = 0; chunkId < numChunks; chunkId++)
 	{
-		docLength << (docIdEndVec[chunkId]-docIdStartVec[chunkId]+1) << "\n";
+		docLength << docIdVec[chunkId] << "\n";
 		TLLength << chunkSizeVec[chunkId] << "\n";
 		DTLength << maxDTLengthVec[chunkId] << "\n";
 		WTLength << maxWTLengthVec[chunkId] << "\n";
