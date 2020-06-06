@@ -48,7 +48,7 @@ int main(int argc, char *argv[]) {
 	int numOfWordD;
 	int numOfWordS;
 	int numChunks = 8;
-	int numIters = 300;
+	int numIters = 100;
 
 
 	int chunksPerStream = numChunks / numStreams;
@@ -161,6 +161,11 @@ int main(int argc, char *argv[]) {
 		startTime1=clock();
 		//printf("chunk WT updated!\n");
 		WT.GPUMemset(streams[1]);
+		if (iter>0){
+			for (int streamId = 0; streamId < numStreams; streamId++){
+				initRandState << <GridDim, BlockDim, 0, streams[streamId] >> >(randState[streamId]);
+			}
+		}
 		//--------------update WTDenSum -----------
 		UpdateWTDenRowSumKernel(WTDen,WT, streams[1]);
 		//--------------update WTDenSum -----------

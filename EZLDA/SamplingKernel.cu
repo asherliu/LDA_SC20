@@ -136,7 +136,8 @@ void UpdateProbKernelD(WTD &argWTDen, WTAll &argWT, DTChunk &argDT, Document &ar
 	cudaMemsetAsync(argDoc.deviceCounterUpdateProbKernel[argStreamId], 0, sizeof(unsigned int),stream);
 	/*cudaMemcpyAsync(argDoc.deviceCounterUpdateProbKernel[argStreamId], &argDoc.counterUpdateProbKernel, sizeof(unsigned int), cudaMemcpyHostToDevice, stream);*/
 
-	initRandState << <GridDim, BlockDim, 0, stream >> >(randState);
+	//initRandState << <GridDim, BlockDim, 0, stream >> >(randState);
+	
 	/*H_ERR(cudaDeviceSynchronize());*/
 
 	// for (int i = 0; i < iterWT; i++) {
