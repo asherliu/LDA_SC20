@@ -1,1 +1,1 @@
-# LDA_SC20
+# EZLDA
